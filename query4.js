@@ -18,7 +18,48 @@ function suggest_friends(year_diff, dbname) {
     db = db.getSiblingDB(dbname);
 
     let pairs = [];
-    // TODO: implement suggest friends
+    
+    db.users.aggregate([
+        // get male users
+        { $match: { gender: "male" } },
+        {
+            $lookup: {
+                from: "users",
+                localField: "hometown.city",
+                foreignField: "hometown.city",
+                as: "possible_friends"
+            }
+        },
+        // unwind
+        { $unwind: "$possible_friends" },
+        // filter females
+        {
+            $match: {
+                "possible_friends.gender": "female",
+                $expr: { $lt: [{ $abs: { $subtract: ["$YOB", "$possible_friends.YOB"] } }, year_diff] },
+                $expr: { $not: { $in: ["$possible_friends.user_id", "$friends"] } }
+            }
+        },
+        // project to desired format
+        {
+            $project: {
+                _id: 0,
+                pair: [
+                    "$user_id", 
+                    "$possible_friends.user_id"
+                ]
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                pairs: { $push: "$pair" }
+            }
+        }
+    ]).forEach(function(doc) {
+        pairs = doc.pairs;
+    });
 
+    
     return pairs;
 }

@@ -11,7 +11,65 @@ function oldest_friend(dbname) {
     db = db.getSiblingDB(dbname);
 
     let results = {};
-    // TODO: implement oldest friends
+
+    unwind_friends(dbname);
+    
+    db.flat_users.aggregate([
+        {
+            $group: {
+                _id: "user_id",
+                friends: { $push: "$friends" }
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "friends",
+                foreignField: "user_id",
+                as: "friend_details",
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                user_id: "$_id",
+                friends: {
+                    $map: {
+                        input: "$friend_details",
+                        as: "friend",
+                        in: { 
+                            user_id: "$$friend.user_id",
+                            year_of_birth: "$$friend.YOB"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                user_id: 1,
+                oldest_friend: {
+                    $arrayElemAt: [
+                        { 
+                            $sortArray: {
+                                input: "$friends", 
+                                sortBy: { year_of_birth: -1, user_id: 1 }
+                            }
+                        }, 0
+                    ]
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                user_id: 1,
+                oldest_friend_id: "$oldest_friend.user_id"
+            }
+        }
+    ]).forEach(function(doc) {
+        results[doc.user_id] = doc.oldest_friend_id;
+    });
 
     return results;
 }
