@@ -44,7 +44,8 @@ public class GetData {
         // This is the data structure to store all users' information
         JSONArray users_info = new JSONArray();
         
-        try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)) {
+        try (Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+             Statement stmt2 = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);) {
             // Your implementation goes here....
             ResultSet rst = stmt.executeQuery(
                     "SELECT user_id, first_name, last_name, gender, year_of_birth, month_of_birth, day_of_birth " + 
@@ -53,7 +54,7 @@ public class GetData {
             while(rst.next()) {
                 int curr_user_id = rst.getInt(1);
                 // create the final JSON object for each user
-                var userEntry = new JSONObject({});
+                JSONObject userEntry = new JSONObject();
                 userEntry.put("user_id", curr_user_id);
 
                 // load user table info
@@ -65,51 +66,52 @@ public class GetData {
                 userEntry.put("DOB", rst.getInt(7));
 
                 // load friends table info
-                ResultSet rst_friends = stmt.executeQuery(
+                ResultSet rst_friends = stmt2.executeQuery(
                         "SELECT user2_id " + 
                         "FROM " + friendsTableName + " " + 
                         "WHERE user1_id = " + curr_user_id);
 
-                var friendsArray = new JSONArray([]);
+                JSONArray friendsArray = new JSONArray();
                 while(rst_friends.next()) {
                     friendsArray.put(rst_friends.getInt(1));
                 }
                 userEntry.put("friends", friendsArray);
 
                 // load current_city table info
-                ResultSet rst_current = stmt.executeQuery(
+                ResultSet rst_current = stmt2.executeQuery(
                         "SELECT city_name, state_name, country_name " +
                         "FROM " + currentCityTableName + " curr " + 
                         "JOIN " + cityTableName + " c " + 
                             "ON curr.current_city_id = c.city_id " + 
                         "WHERE curr.user_id = " + curr_user_id);
 
-                var currentCity = new JSONObject({});
+                JSONObject currentCity = new JSONObject();
                 while(rst_current.next()) {
-                    currentCity = {"city": rst_current.getString(1), 
-                                        "state": rst_current.getString(2), 
-                                        "country": rst_current.getString(3)};
+                    currentCity.put("city", rst_current.getString(1));
+                    currentCity.put("state", rst_current.getString(2));
+                    currentCity.put("country", rst_current.getString(3));
                 }
-                userEntry.put(currentCity);
+                userEntry.put("current", currentCity);
 
                 // load hometown table info
-                ResultSet rst_hometown = stmt.executeQuery(
+                ResultSet rst_hometown = stmt2.executeQuery(
                         "SELECT city_name, state_name, country_name " +
                         "FROM " + hometownCityTableName + " home " + 
                         "JOIN " + cityTableName + " c " + 
                             "ON home.hometown_city_id = c.city_id " + 
                         "WHERE home.user_id = " + curr_user_id);
 
-                var hometownCity = new JSONObject({});
-                while(rst_current.next()) {
-                    hometownCity = {"city": rst_hometown.getString(1), 
-                                        "state": rst_hometown.getString(2), 
-                                        "country": rst_hometown.getString(3)};
+                JSONObject hometownCity = new JSONObject();
+                while(rst_hometown.next()) {
+                    hometownCity.put("city", rst_hometown.getString(1));
+                    hometownCity.put("state", rst_hometown.getString(2));
+                    hometownCity.put("country", rst_hometown.getString(3));
                 }
-                userEntry.put(hometownCity);
+                userEntry.put("hometown", hometownCity);
+
+                // add userEntry to the final JSONArray users_info
+                users_info.put(userEntry);
             }
-            
-            
             stmt.close();
         } catch (SQLException e) {
             System.err.println(e.getMessage());
