@@ -21,7 +21,7 @@ function users_born_by_month(dbname) {
 	db.users.aggregate([
         {
             $group: {
-                _id: "MOB",
+                _id: "$MOB",
                 borncount: { $sum: 1 }
             }
         },

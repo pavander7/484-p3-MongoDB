@@ -18,48 +18,24 @@ function suggest_friends(year_diff, dbname) {
     db = db.getSiblingDB(dbname);
 
     let pairs = [];
-    
-    db.users.aggregate([
-        // get male users
-        { $match: { gender: "male" } },
-        {
-            $lookup: {
-                from: "users",
-                localField: "hometown.city",
-                foreignField: "hometown.city",
-                as: "possible_friends"
-            }
-        },
-        // unwind
-        { $unwind: "$possible_friends" },
-        // filter females
-        {
-            $match: {
-                "possible_friends.gender": "female",
-                $expr: { $lt: [{ $abs: { $subtract: ["$YOB", "$possible_friends.YOB"] } }, year_diff] },
-                $expr: { $not: { $in: ["$possible_friends.user_id", "$friends"] } }
-            }
-        },
-        // project to desired format
-        {
-            $project: {
-                _id: 0,
-                pair: [
-                    "$user_id", 
-                    "$possible_friends.user_id"
-                ]
-            }
-        },
-        {
-            $group: {
-                _id: null,
-                pairs: { $push: "$pair" }
-            }
-        }
-    ]).forEach(function(doc) {
-        pairs = doc.pairs;
+
+    // Fetch all users and store them in an array for iteration
+    let users = db.users.find().toArray();
+
+    users.forEach(userA => {
+        if (userA.gender !== "male") return; // Ensure user A is male
+
+        users.forEach(userB => {
+            if (userB.gender !== "female") return; // Ensure user B is female
+            if (userA.hometown.city !== userB.hometown.city) return; // Same city
+            if (Math.abs(userA.YOB - userB.YOB) >= year_diff) return; // Check YOB difference
+            if (userA.friends.indexOf(userB.user_id) !== -1) return; // Ensure they are not friends
+            if (userB.friends.indexOf(userA.user_id) !== -1) return; // Check both directions
+            
+            // Add pair to pairs
+            pairs.push([userA.user_id, userB.user_id]);
+        });
     });
 
-    
     return pairs;
 }
