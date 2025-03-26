@@ -72,7 +72,7 @@ function cleanUp(){
 
     print("=== Test5 === (This test can take up to a minute)");
     let test5 = oldest_friend(dbname);
-    printjson(test5); // uncomment this line to print the query5 output
+    // printjson(test5); // uncomment this line to print the query5 output
     if (Object.keys(test5).length == 798) {
         if (test5.hasOwnProperty(799)) {
             let ans5 = test5[799];

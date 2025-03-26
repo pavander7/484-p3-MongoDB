@@ -9,9 +9,9 @@ function find_average_friendcount(dbname) {
 
     let results = db.flat_users.aggregate([
         {
-            $project: {
-                user_id: 1,
-                num_friends: { $size: "$friends" }
+            $group: {
+                _id: "$user_id",
+                num_friends: { $sum: 1 }
             }
         },
         {
