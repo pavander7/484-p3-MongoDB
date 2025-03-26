@@ -5,12 +5,10 @@
 function find_user(city, dbname) {
     db = db.getSiblingDB(dbname);
 
-    let results = [];
-    // TODO: find all users who live in city
-    
-    db.users.find({"current.city": city}).forEach(function(user) {
-        results.push(user.user_id);
-    });
+    let results = db.users.find(
+        { "hometown.city": city },  // Filter users by city
+        { _id: 0, "user_id": 1 }   // Return only user_id, exclude _id
+    ).map(user => user.user_id);  // Extract user_id values into an array
 
     // See test.js for a partial correctness check.
 

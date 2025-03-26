@@ -11,7 +11,7 @@ function unwind_friends(dbname) {
 
     db.users.aggregate([
         { $unwind: "$friends" },
-        { $project: { user_id: 1, friends: 1 } },
+        { $project: { _id: 0, user_id: 1, friends: 1 } },
         { $out: "flat_users" }
     ]);
 
