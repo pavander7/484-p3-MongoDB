@@ -61,8 +61,8 @@ public class GetData {
                 userEntry.put("first_name", rst.getString(2));
                 userEntry.put("last_name", rst.getString(3));
                 userEntry.put("gender", rst.getString(4));
-                userEntry.put("YOD", rst.getInt(5));
-                userEntry.put("MOD", rst.getInt(6));
+                userEntry.put("YOB", rst.getInt(5));
+                userEntry.put("MOB", rst.getInt(6));
                 userEntry.put("DOB", rst.getInt(7));
 
                 // load friends table info
