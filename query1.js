@@ -7,8 +7,8 @@ function find_user(city, dbname) {
 
     let results = db.users.find(
         { "hometown.city": city },  // Filter users by city
-        { _id: 1 }   // Return only user_id, exclude _id
-    ).map(user => user._id);  // Extract user_id values into an array
+        { _id: 0, "user_id": 1 }   // Return only user_id, exclude _id
+    ).map(user => user.user_id);  // Extract user_id values into an array
 
     // See test.js for a partial correctness check.
 
