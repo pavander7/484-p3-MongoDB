@@ -7,6 +7,18 @@
 // You should return something like this (order does not matter):
 // {user1:userx1, user2:userx2, user3:userx3,...}
 
+function unwind_friends(dbname) {
+    db = db.getSiblingDB(dbname);
+
+    db.users.aggregate([
+        { $unwind: "$friends" },
+        { $project: { _id: 0, user_id: 1, friends: 1 } },
+        { $out: "flat_users" }
+    ]);
+
+    return;
+}
+
 function oldest_friend(dbname) {
     db = db.getSiblingDB(dbname);
 
