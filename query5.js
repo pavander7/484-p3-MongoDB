@@ -25,86 +25,69 @@ function oldest_friend(dbname) {
     let results = {};
 
     unwind_friends(dbname);
-    
-    db.flat_users.aggregate([
+
+    // First case: user_id is the smaller, friends is the larger
+    let first_case = db.flat_users.aggregate([
         {
-            $facet: {
-                // Case 1: user_id is the smaller, friends is the larger
-                first_case: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "friends",
-                            foreignField: "user_id",
-                            as: "friend_details",
-                        }
-                    },
-                    { $unwind: "$friend_details" },
-                    {
-                        $project: {
-                            user_id: 1,
-                            friend_id: "$friend_details.user_id",
-                            year_of_birth: "$friend_details.YOB"
-                        }
-                    },
-                    {
-                        $sort: { year_of_birth: 1, friend_id: 1 }
-                    },
-                    {
-                        $group: {
-                            _id: "$user_id",
-                            oldest_friend: { $first: "$friend_id" }
-                        }
-                    }
-                ],
-                // Case 2: friends is the smaller, user_id is the larger
-                second_case: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "user_id",
-                            foreignField: "user_id",
-                            as: "friend_details",
-                        }
-                    },
-                    { $unwind: "$friend_details" },
-                    {
-                        $project: {
-                            user_id: "$friends",  // friends is now the user_id
-                            friend_id: "$friend_details.user_id",
-                            year_of_birth: "$friend_details.YOB"
-                        }
-                    },
-                    {
-                        $sort: { year_of_birth: 1, friend_id: 1 }
-                    },
-                    {
-                        $group: {
-                            _id: "$user_id",
-                            oldest_friend: { $first: "$friend_id" }
-                        }
-                    }
-                ]
+            $lookup: {
+                from: "users",
+                localField: "friends",
+                foreignField: "user_id",
+                as: "friend_details"
             }
         },
+        { $unwind: "$friend_details" },
         {
             $project: {
-                // Combine both cases
-                combined_results: { $concatArrays: ["$first_case", "$second_case"] }
-            }
-        },
-        {
-            $unwind: "$combined_results"  // Unwind the combined results to have each user in one document
-        },
-        {
-            $project: {
-                _id: 0,
-                user_id: "$combined_results._id",
-                oldest_friend_id: "$combined_results.oldest_friend"
+                user_id: "$user_id",
+                friend_id: "$friend_details.user_id",
+                year_of_birth: "$friend_details.YOB"
             }
         }
-    ]).forEach(function(doc) {
-        results[doc.user_id] = doc.oldest_friend_id;
+    ]);
+
+    // Second case: friends is the smaller, user_id is the larger
+    let second_case = db.flat_users.aggregate([
+        {
+            $lookup: {
+                from: "users",
+                localField: "user_id",
+                foreignField: "user_id",
+                as: "friend_details"
+            }
+        },
+        { $unwind: "$friend_details" },
+        {
+            $project: {
+                user_id: "$friends",
+                friend_id: "$friend_details.user_id",
+                year_of_birth: "$friend_details.YOB"
+            }
+        }
+    ]);
+
+    let merged_results = {};
+
+    // Process first case
+    first_case.forEach(doc => {
+        if (!merged_results[doc.user_id]) {
+            merged_results[doc.user_id] = [];
+        }
+        merged_results[doc.user_id].push({ friend_id: doc.friend_id, YOB: doc.year_of_birth });
+    });
+
+    // Process second case
+    second_case.forEach(doc => {
+        if (!merged_results[doc.user_id]) {
+            merged_results[doc.user_id] = [];
+        }
+        merged_results[doc.user_id].push({ friend_id: doc.friend_id, YOB: doc.year_of_birth });
+    });
+
+    // Sort and get the oldest friend for each user
+    Object.keys(merged_results).forEach(user_id => {
+        merged_results[user_id].sort((a, b) => a.YOB - b.YOB || a.friend_id - b.friend_id);
+        results[user_id] = merged_results[user_id][0].friend_id; // Select the oldest friend
     });
 
     return results;
